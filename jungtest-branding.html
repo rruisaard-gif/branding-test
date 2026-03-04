@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wat is jouw merkfunctie?</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;800;900&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #111111;
+    --surface: #1c1c1c;
+    --lime: #CAFF00;
+    --white: #f0f0f0;
+    --muted: #666;
+    --border: #2e2e2e;
+    --col-T: #0aaff0;
+    --col-F: #ff3f6c;
+    --col-S: #00e87a;
+    --col-N: #c87aff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Barlow', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 3rem 1.5rem;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.03; pointer-events: none; z-index: 0;
+  }
+  .container { max-width: 700px; width: 100%; position: relative; z-index: 1; }
+
+  /* ── INTRO ── */
+  #intro { animation: slideUp 0.7s cubic-bezier(0.16,1,0.3,1) forwards; }
+  .tag {
+    display: inline-block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+    background: var(--lime); color: var(--bg); padding: 0.3rem 0.8rem; margin-bottom: 2rem;
+  }
+  .intro-headline {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(4rem, 14vw, 9rem); font-weight: 900; line-height: 0.92;
+    text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 2rem;
+  }
+  .intro-headline .highlight { color: var(--lime); display: block; }
+  .intro-body { font-size: 0.9rem; line-height: 1.8; color: #ccc; max-width: 420px; margin-bottom: 3rem; font-weight: 400; }
+  .intro-meta { display: flex; align-items: center; gap: 2rem; margin-bottom: 3rem; }
+  .meta-item { font-family: 'Barlow Condensed', sans-serif; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--white); font-weight: 700; }
+  .meta-item strong { display: block; font-size: 1.8rem; color: var(--white); font-weight: 900; letter-spacing: -0.02em; line-height: 1; margin-bottom: 2px; }
+  .btn-primary {
+    background: var(--lime); color: var(--bg); border: none;
+    padding: 1.1rem 2.8rem;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; font-weight: 800;
+    letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    display: inline-flex; align-items: center; gap: 0.8rem;
+  }
+  .btn-primary:hover { transform: translate(-3px,-3px); box-shadow: 6px 6px 0 rgba(202,255,0,0.35); background: white; }
+  .btn-primary .arrow { font-size: 1.2rem; transition: transform 0.2s; }
+  .btn-primary:hover .arrow { transform: translateX(4px); }
+
+  /* ── QUIZ ── */
+  #quiz { display: none; }
+  .quiz-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; }
+  .q-counter { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: clamp(5rem, 16vw, 8rem); line-height: 1; color: #444; letter-spacing: -0.04em; user-select: none; }
+  .q-counter .cur { color: var(--lime); }
+  .progress-dots { display: flex; gap: 5px; padding-top: 1rem; flex-wrap: wrap; justify-content: flex-end; max-width: 200px; }
+  .pdot { width: 8px; height: 8px; background: var(--border); transition: background 0.3s, transform 0.2s; }
+  .pdot.done { background: var(--lime); }
+  .pdot.active { background: var(--white); transform: scale(1.3); }
+  .question-context { font-size: 0.78rem; color: #ccc; font-style: italic; line-height: 1.6; margin-bottom: 0.8rem; padding-left: 1rem; border-left: 2px solid var(--lime); font-weight: 500; }
+  .question-main { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(1.5rem, 4.5vw, 2.2rem); font-weight: 800; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.01em; margin-bottom: 2rem; }
+  .answers { display: flex; flex-direction: column; gap: 0.6rem; }
+  .answer-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 1rem 1.2rem; text-align: left; cursor: pointer;
+    font-family: 'Barlow', sans-serif; font-size: 0.85rem; font-weight: 400;
+    color: #bbb; line-height: 1.5; transition: all 0.18s ease;
+    display: flex; align-items: center; gap: 1rem; position: relative; overflow: hidden;
+  }
+  .answer-btn::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--lime); transition: width 0.2s ease; z-index: 0; }
+  .answer-btn:hover { border-color: var(--lime); color: var(--white); }
+  .answer-btn:hover::before { width: 3px; }
+  .answer-btn.selected { border-color: var(--lime); background: rgba(202,255,0,0.06); color: var(--white); }
+  .answer-btn.selected::before { width: 3px; }
+  .answer-btn .alabel { font-family: 'Barlow Condensed', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; color: var(--lime); flex-shrink: 0; position: relative; z-index: 1; min-width: 16px; }
+  .answer-btn span:last-child { position: relative; z-index: 1; }
+
+  /* ── RESULT ── */
+  #result { display: none; }
+  .result-wrap { animation: slideUp 0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+  .result-tag { font-family: 'Barlow Condensed', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.25em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+  .result-big { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(3.5rem, 12vw, 7.5rem); font-weight: 900; line-height: 0.88; text-transform: uppercase; letter-spacing: -0.03em; margin-bottom: 0.8rem; }
+  .result-function-tag { display: inline-block; font-family: 'Barlow Condensed', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; padding: 0.3rem 0.9rem; margin-bottom: 2rem; }
+  .result-divider { height: 1px; background: var(--border); margin: 2rem 0; }
+
+  .result-desc { font-size: 0.92rem; line-height: 1.9; color: #ddd; font-weight: 400; max-width: 560px; margin-bottom: 2rem; }
+
+  /* rol blok */
+  .result-role-block { border: 1px solid var(--border); padding: 1.2rem 1.4rem; margin-bottom: 1.5rem; position: relative; }
+  .result-role-block::before { content: 'JE ROL IN HET PROJECT'; position: absolute; top: -0.55rem; left: 1rem; background: var(--bg); padding: 0 0.5rem; font-family: 'Barlow Condensed', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.2em; color: var(--muted); }
+  .result-role-text { font-family: 'Barlow Condensed', sans-serif; font-size: 1.3rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.6rem; }
+  .result-role-desc { font-size: 0.82rem; color: #ccc; line-height: 1.7; font-weight: 400; }
+
+  /* traits */
+  .traits-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 2rem; }
+  .trait-chip { font-family: 'Barlow Condensed', sans-serif; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.3rem 0.8rem; border: 1px solid var(--border); color: #ccc; }
+
+  /* score bars */
+  .scores-section { margin-bottom: 2rem; }
+  .scores-title { font-family: 'Barlow Condensed', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--white); margin-bottom: 1.2rem; }
+  .score-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.9rem; }
+  .sname { font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; width: 120px; flex-shrink: 0; color: #ccc; }
+  .strack { flex: 1; height: 4px; background: var(--surface); position: relative; }
+  .sfill { height: 100%; transition: width 1s cubic-bezier(0.16,1,0.3,1) 0.3s; width: 0%; }
+  .sfill.T { background: var(--col-T); }
+  .sfill.F { background: var(--col-F); }
+  .sfill.S { background: var(--col-S); }
+  .sfill.N { background: var(--col-N); }
+  .spct { font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; font-weight: 700; color: #ccc; width: 36px; text-align: right; }
+  .slabel { font-family: 'Barlow Condensed', sans-serif; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; width: 110px; flex-shrink: 0; text-align: right; }
+  .slabel.dominant { color: var(--lime); }
+  .slabel.present { color: #888; }
+  .slabel.low { color: #444; }
+
+  /* samenwerking */
+  .collab-section { margin-bottom: 2rem; }
+  .collab-title { font-family: 'Barlow Condensed', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--white); margin-bottom: 1.2rem; }
+  .collab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  .collab-card { background: var(--surface); border: 1px solid var(--border); padding: 1rem 1.1rem; }
+  .collab-card-name { font-family: 'Barlow Condensed', sans-serif; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.4rem; }
+  .collab-card-text { font-size: 0.76rem; color: #bbb; line-height: 1.6; font-weight: 400; }
+
+  /* alle functies knop */
+  .btn-all-functions {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    padding: 1rem 1.4rem;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 0.85rem; font-weight: 800;
+    letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; color: var(--white);
+    transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 0.6rem;
+  }
+  .btn-all-functions:hover { border-color: var(--lime); color: var(--lime); }
+  .btn-all-functions .chevron { transition: transform 0.3s; font-style: normal; }
+  .btn-all-functions.open .chevron { transform: rotate(180deg); }
+
+  /* alle functies panel */
+  .all-functions-panel { display: none; margin-bottom: 2rem; }
+  .all-functions-panel.open { display: block; animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1); }
+  .func-card { border: 1px solid var(--border); padding: 1.4rem; margin-bottom: 0.6rem; position: relative; overflow: hidden; }
+  .func-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+  .func-card.T::before { background: var(--col-T); }
+  .func-card.F::before { background: var(--col-F); }
+  .func-card.S::before { background: var(--col-S); }
+  .func-card.N::before { background: var(--col-N); }
+  .func-card-header { display: flex; align-items: baseline; gap: 0.8rem; margin-bottom: 0.8rem; }
+  .func-card-icon { font-size: 1.3rem; }
+  .func-card-title { font-family: 'Barlow Condensed', sans-serif; font-size: 1.4rem; font-weight: 900; text-transform: uppercase; letter-spacing: -0.01em; }
+  .func-card-sub { font-family: 'Barlow Condensed', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem; }
+  .func-card-desc { font-size: 0.82rem; color: #ccc; line-height: 1.75; margin-bottom: 0.8rem; font-weight: 400; }
+  .func-card-role { font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .func-you-badge { display: inline-block; font-family: 'Barlow Condensed', sans-serif; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; background: var(--lime); color: var(--bg); padding: 0.2rem 0.6rem; margin-left: 0.6rem; vertical-align: middle; }
+
+  /* bottom buttons */
+  .bottom-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+  .btn-secondary { background: transparent; border: 1px solid var(--border); padding: 0.8rem 1.8rem; font-family: 'Barlow Condensed', sans-serif; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; color: var(--muted); transition: all 0.2s; }
+  .btn-secondary:hover { border-color: var(--white); color: var(--white); }
+
+  /* ALL FUNCTIONS PAGE */
+  #allFunctions { display: none; }
+  .af-header { margin-bottom: 3rem; }
+  .af-back { background: transparent; border: none; font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem; transition: color 0.2s; padding: 0; }
+  .af-back:hover { color: var(--white); }
+  .af-title { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(3rem, 10vw, 6rem); font-weight: 900; line-height: 0.9; text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 0.8rem; }
+  .af-title .hl { color: var(--lime); }
+  .af-subtitle { font-size: 0.85rem; color: #aaa; line-height: 1.7; max-width: 480px; }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fade-slide { animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+  @media (max-width: 500px) {
+    .collab-grid { grid-template-columns: 1fr; }
+    .q-counter { font-size: 4rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ── INTRO ── -->
+  <div id="intro">
+    <div class="tag">Branding &amp; Positioning — Cursus</div>
+    <h1 class="intro-headline">Jouw<span class="highlight">Merk&shy;functie</span></h1>
+    <p class="intro-body">Gebaseerd op de vier psychologische functies van Carl Jung. Beantwoord 8 vragen zo eerlijk mogelijk — er zijn geen goede of foute antwoorden.</p>
+    <div class="intro-meta">
+      <div class="meta-item"><strong>8</strong>Vragen</div>
+      <div class="meta-item"><strong>4</strong>Functies</div>
+      <div class="meta-item"><strong>2 min</strong>Gemiddeld</div>
+    </div>
+    <button class="btn-primary" onclick="startQuiz()">Start de test <span class="arrow">→</span></button>
+  </div>
+
+  <!-- ── QUIZ ── -->
+  <div id="quiz">
+    <div class="quiz-header">
+      <div class="q-counter" id="qCounter"><span class="cur">01</span> / 08</div>
+      <div class="progress-dots" id="progressDots"></div>
+    </div>
+    <div class="question-context" id="qContext"></div>
+    <div class="question-main" id="qMain"></div>
+    <div class="answers" id="answers"></div>
+  </div>
+
+  <!-- ── RESULT ── -->
+  <div id="result"></div>
+
+  <!-- ── ALL FUNCTIONS PAGE ── -->
+  <div id="allFunctions">
+    <div class="af-header">
+      <button class="af-back" onclick="backToResult()">← Terug naar jouw resultaat</button>
+      <h2 class="af-title">De vier<br><span class="hl">Functies</span></h2>
+      <p class="af-subtitle">Elke functie brengt iets onmisbaars naar het team. Samen vormen ze een compleet merkteam.</p>
+    </div>
+    <div id="allFunctionsCards"></div>
+    <div style="margin-top:2rem">
+      <button class="btn-primary" onclick="backToResult()">← Terug naar jouw resultaat <span class="arrow"></span></button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const questions = [
+  {
+    context: "Je zit voor het eerst met je team om de tafel voor een rebrandingproject. Het bedrijf is onbekend terrein.",
+    main: "Wat doe jij als eerste?",
+    answers: [
+      { text: "Ik maak een overzicht: wat weten we al, wat moeten we nog uitzoeken?", type: "T" },
+      { text: "Ik vraag het team hoe zij het merk kennen en wat ze erbij voelen.", type: "F" },
+      { text: "Ik zoek op hoe het merk er nu uitziet en wat concurrenten doen.", type: "S" },
+      { text: "Ik bedenk meteen een richting of rode draad voor het verhaal.", type: "N" }
+    ]
+  },
+  {
+    context: "Jullie zijn bezig met de merkstrategie en de vraag ligt op tafel: wat maakt dit merk uniek?",
+    main: "Wat is jouw bijdrage aan het gesprek?",
+    answers: [
+      { text: "\"Laten we kijken wat ons onderscheidt van de concurrentie — wat zeggen de feiten?\"", type: "T" },
+      { text: "\"Ik wil weten wat dit merk betekent voor de mensen die het gebruiken.\"", type: "F" },
+      { text: "\"Laten we kijken hoe het merk er nu uitziet en wat dat al vertelt.\"", type: "S" },
+      { text: "\"Stel je voor dat dit merk een persoon was — wie zou dat dan zijn?\"", type: "N" }
+    ]
+  },
+  {
+    context: "Je krijgt de kans om één centrale vraag te stellen die het hele project stuurt.",
+    main: "Welke vraag kies jij?",
+    answers: [
+      { text: "Waarom kiest iemand dit merk en niet een ander?", type: "T" },
+      { text: "Hoe voelt het om klant van dit merk te zijn?", type: "F" },
+      { text: "Hoe ziet dit merk eruit als het écht af is?", type: "S" },
+      { text: "Welk groter verhaal vertelt dit merk over de toekomst?", type: "N" }
+    ]
+  },
+  {
+    context: "Een teamlid presenteert een creatief idee, maar je snapt de redenering er niet meteen achter.",
+    main: "Wat doe jij?",
+    answers: [
+      { text: "Ik vraag om uitleg: wat is de logica erachter?", type: "T" },
+      { text: "Ik vraag hoe het idee op hen overkwam — wat voelden ze erbij?", type: "F" },
+      { text: "Ik vraag of ze het kunnen laten zien met een voorbeeld of schets.", type: "S" },
+      { text: "Ik ga meteen meedenken en voeg mijn eigen ideeën toe.", type: "N" }
+    ]
+  },
+  {
+    context: "Iemand buiten het project vraagt je waar het merk over gaat.",
+    main: "Hoe leg jij het uit?",
+    answers: [
+      { text: "Met een heldere uitleg: dit is de doelgroep, dit is wat we doen, dit is waarom.", type: "T" },
+      { text: "Door te vertellen wat het merk betekent voor de mensen die het gebruiken.", type: "F" },
+      { text: "Door iets te laten zien: het logo, de kleuren, een voorbeeld.", type: "S" },
+      { text: "Door een vergelijking te maken: \"dit merk is eigenlijk een beetje zoals…\"", type: "N" }
+    ]
+  },
+  {
+    context: "Het project loopt al een paar weken en de samenwerking gaat niet helemaal soepel.",
+    main: "Waar erger jij je het meest aan?",
+    answers: [
+      { text: "Er is geen duidelijk plan — iedereen doet maar wat.", type: "T" },
+      { text: "De sfeer is gespannen en het team praat langs elkaar heen.", type: "F" },
+      { text: "Ideeën blijven vaag en niemand maakt iets concreets.", type: "S" },
+      { text: "Alles is te saai en voorspelbaar — er is geen lef of vernieuwing.", type: "N" }
+    ]
+  },
+  {
+    context: "De ontwerper presenteert het eerste concept van het logo.",
+    main: "Waar gaat jouw aandacht als eerste naartoe?",
+    answers: [
+      { text: "Of het aansluit bij de strategie en doelgroep die we hebben bepaald.", type: "T" },
+      { text: "Welk gevoel het bij me oproept — klopt dit met wie we willen zijn?", type: "F" },
+      { text: "De details: kleur, lettertype, of het er verzorgd en professioneel uitziet.", type: "S" },
+      { text: "Wat het logo 'zegt' — welk idee of verhaal er achter zit.", type: "N" }
+    ]
+  },
+  {
+    context: "Het project is afgerond en het brandbook wordt opgeleverd.",
+    main: "Waar ben jij het meest trots op?",
+    answers: [
+      { text: "Dat onze keuzes goed onderbouwd zijn en logisch kloppen.", type: "T" },
+      { text: "Dat het merk écht aansluit bij de mensen voor wie het bedoeld is.", type: "F" },
+      { text: "Dat het brandbook er verzorgd uitziet en klaar is om te gebruiken.", type: "S" },
+      { text: "Dat we iets nieuws en verrassends hebben neergezet.", type: "N" }
+    ]
+  }
+];
+
+const results = {
+  T: {
+    icon: "🧠", title: "De Denker", sub: "Functie — Thinking", color: "var(--col-T)",
+    desc: "Jij bent de analytische kracht van het team. Je denkt in structuren, logica en onderbouwde keuzes. Je stelt de kritische vragen die anderen soms overslaan — en dat is precies waarom het merk uiteindelijk stevig in de markt staat.",
+    role: "Strategie & Positionering",
+    roleDesc: "Jij bouwt de merkarchitectuur. Je analyseert de markt, de concurrentie en de doelgroep, en vertaalt dat naar een heldere positionering. Zonder jouw onderbouwing heeft het team geen stevig fundament om op te bouwen.",
+    traits: ["Analytisch", "Structurerend", "Kritisch", "Onderbouwend", "Helder"],
+    collab: {
+      F: "De Voeler zorgt dat jouw strategie niet te koud aanvoelt — luister naar zijn of haar gevoel bij keuzes.",
+      S: "De Waarnemer zet jouw strategie om in concrete beelden. Geef duidelijke kaders, dan kan hij/zij excelleren.",
+      N: "De Intuïtief geeft richting aan het grote verhaal. Gebruik zijn ideeën als input voor jouw analyse."
+    }
+  },
+  F: {
+    icon: "❤️", title: "De Voeler", sub: "Functie — Feeling", color: "var(--col-F)",
+    desc: "Jij bewaakt de ziel van het merk. Je voelt aan of iets klopt — of het merk écht is, of het mensen raakt, of het authentiek is. Je zorgt dat het geen abstracte oefening blijft maar een merk dat mensen onthouden en vertrouwen.",
+    role: "Merkwaarden & Doelgroepverbinding",
+    roleDesc: "Jij bewaakt de echtheid. Je stelt steeds de vraag: klopt dit met wie we willen zijn? En: raakt dit de mensen voor wie het bedoeld is? Je bent de stem van de doelgroep binnen het team.",
+    traits: ["Empathisch", "Authentiek", "Verbindend", "Waardengericht", "Mensgericht"],
+    collab: {
+      T: "De Denker geeft jouw gevoel een onderbouwing. Samen zorgen jullie voor een strategie die klopt én aanvoelt.",
+      S: "De Waarnemer maakt jouw waarden visueel zichtbaar. Deel wat het merk moet uitstralen, dan zorgt hij/zij voor de uitvoering.",
+      N: "De Intuïtief denkt in vergelijkingen en verhalen — dat sluit goed aan op jouw gevoel voor merkziel."
+    }
+  },
+  S: {
+    icon: "👁️", title: "De Waarnemer", sub: "Functie — Sensation", color: "var(--col-S)",
+    desc: "Jij maakt het merk zichtbaar en tastbaar. Terwijl anderen nog praten over abstracte waarden, zie jij al voor je hoe het eruit ziet en voelt. Je oog voor detail maakt het verschil tussen een idee en een merk dat echt werkt.",
+    role: "Visuele Identiteit & Brandbook",
+    roleDesc: "Jij maakt het concreet. Van kleurpalet tot typografie tot de opmaak van het brandbook zelf — jij zorgt dat alles er professioneel uitziet en klopt in de uitvoering. Het eindresultaat is letterlijk jouw werk.",
+    traits: ["Detailgericht", "Visueel", "Praktisch", "Precies", "Uitvoerend"],
+    collab: {
+      T: "De Denker geeft je heldere kaders en doelgroepinformatie. Gebruik die als basis voor jouw visuele keuzes.",
+      F: "De Voeler vertelt je wat het merk moet voelen — vertaal dat naar beeld, kleur en stijl.",
+      N: "De Intuïtief heeft grote ideeën die soms moeilijk uitvoerbaar zijn. Jij bent degene die bepaalt wat écht werkt."
+    }
+  },
+  N: {
+    icon: "✨", title: "De Intuïtief", sub: "Functie — Intuition", color: "var(--col-N)",
+    desc: "Jij ziet het grote plaatje — en dan nog verder. Je verbindt ideeën die anderen niet zien en voelt de richting aan voordat de data er is. Je bent de creatieve motor die het merk niet alleen relevant maakt voor nu, maar positioneert voor de toekomst.",
+    role: "Merkrichting & Verhaal",
+    roleDesc: "Jij bepaalt de koers. Je bedenkt het overkoepelende merkverhaal, de kernmetafoor en de creatieve richting. Je inspireert het team om verder te kijken dan het voor de hand liggende.",
+    traits: ["Visionair", "Creatief", "Verbanden-ziend", "Toekomstgericht", "Inspirerend"],
+    collab: {
+      T: "De Denker zet jouw ideeën op haalbaarheid — zie dat niet als rem maar als kwaliteitscheck.",
+      F: "De Voeler toetst of jouw verhaal authentiek aanvoelt. Samen creëren jullie een merk met ziel én richting.",
+      S: "De Waarnemer maakt jouw visie concreet. Zonder hem/haar blijven jouw ideeën abstract."
+    }
+  }
+};
+
+const collabNames = { T: "🧠 De Denker", F: "❤️ De Voeler", S: "👁️ De Waarnemer", N: "✨ De Intuïtief" };
+
+let currentQ = 0;
+let scores = { T: 0, F: 0, S: 0, N: 0 };
+let answered = new Array(questions.length).fill(null);
+let winnerType = null;
+
+function startQuiz() {
+  document.getElementById('intro').style.display = 'none';
+  document.getElementById('quiz').style.display = 'block';
+  renderQuestion();
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function renderQuestion() {
+  const q = questions[currentQ];
+  document.getElementById('qCounter').innerHTML = `<span class="cur">${pad(currentQ+1)}</span> / ${pad(questions.length)}`;
+  const dots = document.getElementById('progressDots');
+  dots.innerHTML = '';
+  questions.forEach((_,i) => {
+    const d = document.createElement('div');
+    d.className = 'pdot'+(i<currentQ?' done':i===currentQ?' active':'');
+    dots.appendChild(d);
+  });
+  document.getElementById('qContext').textContent = q.context;
+  document.getElementById('qMain').textContent = q.main;
+  const letters = ['A','B','C','D'];
+  const answersEl = document.getElementById('answers');
+  answersEl.innerHTML = '';
+  const shuffled = [...q.answers].sort(()=>Math.random()-0.5);
+  shuffled.forEach((a,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn'+(answered[currentQ]===a.type?' selected':'');
+    btn.innerHTML = `<span class="alabel">${letters[i]}</span><span>${a.text}</span>`;
+    btn.onclick = () => selectAnswer(a.type, btn);
+    answersEl.appendChild(btn);
+  });
+  document.getElementById('quiz').classList.add('fade-slide');
+  setTimeout(() => document.getElementById('quiz').classList.remove('fade-slide'), 400);
+}
+
+function selectAnswer(type, btn) {
+  if (answered[currentQ]) scores[answered[currentQ]]--;
+  answered[currentQ] = type;
+  scores[type]++;
+  document.querySelectorAll('.answer-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  setTimeout(() => {
+    if (currentQ < questions.length-1) { currentQ++; renderQuestion(); }
+    else showResult();
+  }, 380);
+}
+
+function getScoreLabel(pct, isWinner) {
+  if (isWinner) return { text: 'Dominant', cls: 'dominant' };
+  if (pct >= 25) return { text: 'Aanwezig', cls: 'present' };
+  return { text: 'Minder actief', cls: 'low' };
+}
+
+function showResult() {
+  document.getElementById('quiz').style.display = 'none';
+  const el = document.getElementById('result');
+  el.style.display = 'block';
+
+  const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  winnerType = sorted[0][0];
+  const r = results[winnerType];
+  const max = questions.length;
+
+  const labels = { T:'🧠 Denken', F:'❤️ Voelen', S:'👁️ Waarnemen', N:'✨ Intuïtie' };
+
+  const scoreRows = sorted.map(([type, score]) => {
+    const pct = Math.round((score/max)*100);
+    const lbl = getScoreLabel(pct, type === winnerType);
+    return `<div class="score-row">
+      <span class="sname">${labels[type]}</span>
+      <div class="strack"><div class="sfill ${type}" data-w="${pct}%"></div></div>
+      <span class="spct">${pct}%</span>
+      <span class="slabel ${lbl.cls}">${lbl.text}</span>
+    </div>`;
+  }).join('');
+
+  // samenwerking
+  const collabCards = Object.entries(r.collab).map(([type, text]) => `
+    <div class="collab-card">
+      <div class="collab-card-name" style="color:${results[type].color}">${collabNames[type]}</div>
+      <div class="collab-card-text">${text}</div>
+    </div>
+  `).join('');
+
+  el.innerHTML = `<div class="result-wrap">
+    <div class="result-tag">Jouw merkfunctie is —</div>
+    <div class="result-big" style="color:${r.color}">${r.icon} ${r.title}</div>
+    <div class="result-function-tag" style="background:${r.color};color:#111">${r.sub}</div>
+
+    <p class="result-desc">${r.desc}</p>
+
+    <div class="result-role-block">
+      <div class="result-role-text" style="color:${r.color}">${r.role}</div>
+      <div class="result-role-desc">${r.roleDesc}</div>
+    </div>
+
+    <div class="traits-row">${r.traits.map(t=>`<span class="trait-chip">${t}</span>`).join('')}</div>
+
+    <div class="result-divider"></div>
+
+    <div class="scores-section">
+      <div class="scores-title">Jouw functieprofiel</div>
+      ${scoreRows}
+    </div>
+
+    <div class="result-divider"></div>
+
+    <div class="collab-section">
+      <div class="collab-title">Zo werk jij samen met de andere functies</div>
+      <div class="collab-grid">${collabCards}</div>
+    </div>
+
+    <div class="result-divider"></div>
+
+    <button class="btn-all-functions" id="toggleAllBtn" onclick="toggleAllFunctions()">
+      <span>Bekijk alle vier de functies</span>
+      <span class="chevron">↓</span>
+    </button>
+    <div class="all-functions-panel" id="allFunctionsInline"></div>
+
+    <div class="bottom-actions" style="margin-top:1.5rem">
+      <button class="btn-secondary" onclick="resetQuiz()">↩ Opnieuw beginnen</button>
+    </div>
+  </div>`;
+
+  setTimeout(() => {
+    document.querySelectorAll('.sfill').forEach(el => { el.style.width = el.dataset.w; });
+  }, 100);
+}
+
+function toggleAllFunctions() {
+  const panel = document.getElementById('allFunctionsInline');
+  const btn = document.getElementById('toggleAllBtn');
+  const isOpen = panel.classList.contains('open');
+
+  if (isOpen) {
+    panel.classList.remove('open');
+    panel.style.display = 'none';
+    btn.classList.remove('open');
+  } else {
+    panel.innerHTML = buildAllFunctionsHTML(winnerType);
+    panel.style.display = 'block';
+    panel.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+
+function buildAllFunctionsHTML(myType) {
+  const order = ['T','F','S','N'];
+  return order.map(type => {
+    const r = results[type];
+    const isYou = type === myType;
+    return `<div class="func-card ${type}">
+      <div class="func-card-header">
+        <span class="func-card-icon">${r.icon}</span>
+        <span class="func-card-title" style="color:${r.color}">${r.title}</span>
+        ${isYou ? '<span class="func-you-badge">Jij</span>' : ''}
+      </div>
+      <div class="func-card-sub">${r.sub}</div>
+      <div class="func-card-desc">${r.desc}</div>
+      <div class="func-card-role" style="color:${r.color}">→ ${r.role}</div>
+    </div>`;
+  }).join('');
+}
+
+function backToResult() {
+  document.getElementById('allFunctions').style.display = 'none';
+  document.getElementById('result').style.display = 'block';
+}
+
+function resetQuiz() {
+  currentQ = 0; scores = {T:0,F:0,S:0,N:0};
+  answered = new Array(questions.length).fill(null);
+  winnerType = null;
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('allFunctions').style.display = 'none';
+  document.getElementById('intro').style.display = 'block';
+}
+</script>
+</body>
+</html>
